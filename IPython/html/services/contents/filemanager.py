@@ -87,13 +87,13 @@ class FileContentsManager(FileManagerMixin, ContentsManager):
         This can be used to process the file on disk,
         such as converting the notebook to a script or HTML via nbconvert.
 
-        It will be called as (all arguments passed by keyword):
+        It will be called as (all arguments passed by keyword)::
 
             hook(os_path=os_path, model=model, contents_manager=instance)
 
-        path: the filesystem path to the file just written
-        model: the model representing the file
-        contents_manager: this ContentsManager instance
+        - path: the filesystem path to the file just written
+        - model: the model representing the file
+        - contents_manager: this ContentsManager instance
         """
     )
     def _post_save_hook_changed(self, name, old, new):
@@ -348,7 +348,7 @@ class FileContentsManager(FileManagerMixin, ContentsManager):
         else:
             if type == 'directory':
                 raise web.HTTPError(400,
-                                u'%s is not a directory', reason='bad type')
+                                u'%s is not a directory' % path, reason='bad type')
             model = self._file_model(path, content=content, format=format)
         return model
 
@@ -373,10 +373,11 @@ class FileContentsManager(FileManagerMixin, ContentsManager):
         if 'content' not in model and model['type'] != 'directory':
             raise web.HTTPError(400, u'No file content provided')
 
-        self.run_pre_save_hook(model=model, path=path)
-
         os_path = self._get_os_path(path)
         self.log.debug("Saving %s", os_path)
+
+        self.run_pre_save_hook(model=model, path=path)
+
         try:
             if model['type'] == 'notebook':
                 nb = nbformat.from_dict(model['content'])

@@ -25,6 +25,7 @@ window.mathjax_url = "{{mathjax_url}}";
 
 {% block params %}
 
+{{super()}}
 data-project="{{project}}"
 data-base-url="{{base_url}}"
 data-ws-url="{{ws_url}}"
@@ -58,10 +59,16 @@ data-notebook-path="{{notebook_path}}"
               <i class="fa fa-bars"></i>
               <span class="navbar-text">Menu</span>
             </button>
-            <p id="kernel_indicator" class="navbar-text">
+            <p id="kernel_indicator" class="navbar-text indicator_area">
               <span class="kernel_indicator_name">Kernel</span>
               <i id="kernel_indicator_icon"></i>
             </p>
+            <i id="readonly-indicator" class="navbar-text" title='This notebook is read-only'>
+                <span class="fa-stack">
+                    <i class="fa fa-save fa-stack-1x"></i>
+                    <i class="fa fa-ban fa-stack-2x text-danger"></i>
+                </span>
+            </i>
             <i id="modal_indicator" class="navbar-text"></i>
             <span id="notification_area"></span>
             <div class="navbar-collapse collapse">
@@ -100,8 +107,9 @@ data-notebook-path="{{notebook_path}}"
                                 <li id="download_ipynb"><a href="#">IPython Notebook (.ipynb)</a></li>
                                 <li id="download_script"><a href="#">Script</a></li>
                                 <li id="download_html"><a href="#">HTML (.html)</a></li>
+                                <li id="download_markdown"><a href="#">Markdown (.md)</a></li>
                                 <li id="download_rst"><a href="#">reST (.rst)</a></li>
-                                <li id="download_pdf"><a href="#">PDF (.pdf)</a></li>
+                                <li id="download_pdf"><a href="#">PDF via LaTeX (.pdf)</a></li>
                             </ul>
                         </li>
                         <li class="divider"></li>
@@ -111,7 +119,7 @@ data-notebook-path="{{notebook_path}}"
                         <li class="divider"></li>
                         <li id="kill_and_exit"
                             title="Shutdown this notebook's kernel, and close this window">
-                            <a href="#" >Close and halt</a></li>
+                            <a href="#" >Close and Halt</a></li>
                     </ul>
                 </li>
                 <li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">Edit</a>
@@ -287,12 +295,17 @@ data-notebook-path="{{notebook_path}}"
 
 {% block site %}
 
-
 <div id="ipython-main-app">
     <div id="notebook_panel">
         <div id="notebook"></div>
+        <div id='tooltip' class='ipython_tooltip' style='display:none'></div>
     </div>
 </div>
+
+
+{% endblock %}
+
+{% block after_site %}
 
 <div id="pager">
     <div id="pager-contents">
@@ -301,11 +314,7 @@ data-notebook-path="{{notebook_path}}"
     <div id='pager-button-area'></div>
 </div>
 
-<div id='tooltip' class='ipython_tooltip' style='display:none'></div>
-
-
 {% endblock %}
-
 
 {% block script %}
 {{super()}}

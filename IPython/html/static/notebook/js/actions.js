@@ -79,6 +79,7 @@ define(function(require){
             }
         },
         'select-previous-cell' : {
+            help: 'select cell above',
             help_index : 'da',
             handler : function (env) {
                 var index = env.notebook.get_selected_index();
@@ -89,6 +90,7 @@ define(function(require){
             }
         },
         'select-next-cell' : {
+            help: 'select cell below',
             help_index : 'db',
             handler : function (env) {
                 var index = env.notebook.get_selected_index();
@@ -105,7 +107,6 @@ define(function(require){
                 var index = env.notebook.get_selected_index();
                 env.notebook.cut_cell();
                 env.notebook.select(index);
-                env.notebook.focus_cell();
             }
         },
         'copy-selected-cell' : {
@@ -113,16 +114,17 @@ define(function(require){
             help_index : 'ef',
             handler : function (env) {
                 env.notebook.copy_cell();
-                env.notebook.focus_cell();
             }
         },
         'paste-cell-before' : {
+            help: 'paste cell above',
             help_index : 'eg',
             handler : function (env) {
                 env.notebook.paste_cell_above();
             }
         },
         'paste-cell-after' : {
+            help: 'paste cell below',
             icon: 'fa-paste',
             help_index : 'eh',
             handler : function (env) {
@@ -130,6 +132,7 @@ define(function(require){
             }
         },
         'insert-cell-before' : {
+            help: 'insert cell above',
             help_index : 'ec',
             handler : function (env) {
                 env.notebook.insert_cell_above();
@@ -138,6 +141,7 @@ define(function(require){
             }
         },
         'insert-cell-after' : {
+            help: 'insert cell below',
             icon : 'fa-plus',
             help_index : 'ed',
             handler : function (env) {
@@ -251,6 +255,7 @@ define(function(require){
             }
         },
         'delete-cell': {
+            help: 'delete selected cell',
             help_index : 'ej',
             handler : function (env) {
                 env.notebook.delete_cell();
@@ -261,7 +266,6 @@ define(function(require){
             help_index : 'ha',
             handler : function (env) {
                 env.notebook.kernel.interrupt();
-                env.notebook.focus_cell();
             }
         },
         'restart-kernel':{
@@ -269,7 +273,6 @@ define(function(require){
             help_index : 'hb',
             handler : function (env) {
                 env.notebook.restart_kernel();
-                env.notebook.focus_cell();
             }
         },
         'undo-last-cell-deletion' : {

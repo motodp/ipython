@@ -28,6 +28,7 @@ help:
 	@echo "  info        Texinfo files and run them through makeinfo"
 	@echo "  changes     an overview over all changed/added/deprecated items"
 	@echo "  linkcheck   check all external links for integrity (takes a long time)"
+	@echo "  gh-pages    clone IPython docs in ./gh-pages/ , build doc, autocommit"
 	@echo
 	@echo "Compound utility targets:"
 	@echo "pdf          latex and then runs the PDF generation"
@@ -40,7 +41,7 @@ clean_api:
 
 clean: clean_api
 	-rm -rf build/* dist/*
-	-cd $(SRCDIR)/config/options; cat generated | xargs -r rm -f
+	-cd $(SRCDIR)/config/options; test -f generated && cat generated | xargs rm -f
 	-rm -rf $(SRCDIR)/config/options/generated
 	-rm -f $(SRCDIR)/interactive/magics-generated.txt
 

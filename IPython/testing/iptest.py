@@ -42,12 +42,6 @@ from IPython.external.decorators import KnownFailure, knownfailureif
 
 pjoin = path.join
 
-
-#-----------------------------------------------------------------------------
-# Globals
-#-----------------------------------------------------------------------------
-
-
 #-----------------------------------------------------------------------------
 # Warnings control
 #-----------------------------------------------------------------------------
@@ -127,7 +121,7 @@ have = {}
 have['curses'] = test_for('_curses')
 have['matplotlib'] = test_for('matplotlib')
 have['numpy'] = test_for('numpy')
-have['pexpect'] = test_for('IPython.external.pexpect')
+have['pexpect'] = test_for('pexpect')
 have['pymongo'] = test_for('pymongo')
 have['pygments'] = test_for('pygments')
 have['qt'] = test_for('IPython.external.qt')
@@ -143,7 +137,7 @@ have['casperjs'] = is_cmd_found('casperjs')
 have['phantomjs'] = is_cmd_found('phantomjs')
 have['slimerjs'] = is_cmd_found('slimerjs')
 
-min_zmq = (2,1,11)
+min_zmq = (13,)
 
 have['zmq'] = test_for('zmq.pyzmq_version_info', min_zmq, callback=lambda x: x())
 
@@ -176,8 +170,16 @@ class TestSection(object):
     def will_run(self):
         return self.enabled and all(have[p] for p in self.dependencies)
 
+shims = {
+    'parallel': 'ipython_parallel',
+    'kernel': 'ipython_kernel',
+    'kernel.inprocess': 'ipython_kernel.inprocess',
+    'config': 'traitlets',
+}
+
 # Name -> (include, exclude, dependencies_met)
-test_sections = {n:TestSection(n, ['IPython.%s' % n]) for n in test_group_names}
+test_sections = {n:TestSection(n, [shims.get(n, 'IPython.%s' % n)]) for n in test_group_names}
+
 
 # Exclusions and dependencies
 # ---------------------------
@@ -231,10 +233,10 @@ sec.requires('zmq')
 # The in-process kernel tests are done in a separate section
 sec.exclude('inprocess')
 # importing gtk sets the default encoding, which we want to avoid
-sec.exclude('zmq.gui.gtkembed')
-sec.exclude('zmq.gui.gtk3embed')
+sec.exclude('gui.gtkembed')
+sec.exclude('gui.gtk3embed')
 if not have['matplotlib']:
-    sec.exclude('zmq.pylab')
+    sec.exclude('pylab')
 
 # kernel.inprocess:
 test_sections['kernel.inprocess'].requires('zmq')
@@ -268,10 +270,6 @@ if not have['pygments'] or not have['jinja2']:
     sec.exclude('nbconvert')
 if not have['terminado']:
     sec.exclude('terminal')
-
-# config:
-# Config files aren't really importable stand-alone
-test_sections['config'].exclude('profile')
 
 # nbconvert:
 sec = test_sections['nbconvert']
@@ -388,7 +386,7 @@ class StreamCapturer(Thread):
             return
 
         self.stop.set()
-        os.write(self.writefd, b'wake up')  # Ensure we're not locked in a read()
+        os.write(self.writefd, b'\0')  # Ensure we're not locked in a read()
         self.join()
 
 class SubprocessStreamCapturePlugin(Plugin):
@@ -465,10 +463,6 @@ def run_iptest():
         
 
     argv = sys.argv + [ '--detailed-errors',  # extra info in tracebacks
-
-                        '--with-ipdoctest',
-                        '--ipdoctest-tests','--ipdoctest-extension=txt',
-
                         # We add --exe because of setuptools' imbecility (it
                         # blindly does chmod +x on ALL files).  Nose does the
                         # right thing and it tries to avoid executables,
@@ -491,10 +485,18 @@ def run_iptest():
         # for nose >= 0.11, though unfortunately nose 0.10 doesn't support it.
         argv.append('--traverse-namespace')
 
-    # use our plugin for doctesting.  It will remove the standard doctest plugin
-    # if it finds it enabled
-    plugins = [ExclusionPlugin(section.excludes), IPythonDoctest(), KnownFailure(),
+    plugins = [ ExclusionPlugin(section.excludes), KnownFailure(),
                SubprocessStreamCapturePlugin() ]
+    
+    # we still have some vestigial doctests in core
+    if (section.name.startswith(('core', 'IPython.core'))):
+        plugins.append(IPythonDoctest())
+        argv.extend([
+            '--with-ipdoctest',
+            '--ipdoctest-tests',
+            '--ipdoctest-extension=txt',
+        ])
+
     
     # Use working directory set by parent process (see iptestcontroller)
     if 'IPTEST_WORKING_DIR' in os.environ:

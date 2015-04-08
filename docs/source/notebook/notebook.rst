@@ -80,7 +80,7 @@ nbviewer.
 
 .. seealso::
 
-    :ref:`Details on the notebook JSON file format <notebook_format>` 
+    :ref:`Details on the notebook JSON file format <nbformat>` 
    
 
 Starting the notebook server
@@ -417,6 +417,26 @@ on available options, use::
 
     :ref:`notebook_public_server`
 
+Installing new kernels
+----------------------
+
+Running the notebook makes the current python installation available as a kernel. Other
+python installations (different python versions, virtualenv or conda environments) can
+be installed as kernels by following these steps:
+
+* make sure that the desired python installation is active (e.g. activate the environment)
+  and ipython is installed
+* run once ``ipython kernelspec install-self --user`` (or ``ipython2 ...`` or ``ipython3 ...``
+  if you want to install specific python versions)
+
+The last command installs a kernel spec file for the current python installation in
+``~/.ipython/kernels/``. Kernel spec files are JSON files, which can be viewed and changed with a
+normal text editor.
+
+Kernels for other languages can be found in the `IPython wiki
+<https://github.com/ipython/ipython/wiki/IPython%20kernels%20for%20other%20languages>`_.
+They usually come with instruction what to run to make the kernel available in the notebook.
+
 
 .. _signing_notebooks:
 
@@ -477,6 +497,6 @@ script back into a notebook will preserve this structure.
    format.
 
 .. seealso::
-    :ref:`notebook_format`
+    :ref:`nbformat`
 
 .. include:: ../links.txt

@@ -4,10 +4,17 @@
 define([
     "widgets/js/widget",
     "jqueryui",
+    "underscore",
     "base/js/utils",
     "bootstrap",
-], function(widget, $, utils){
+], function(widget, $, _, utils){
     "use strict";
+
+    var BoxModel = widget.WidgetModel.extend({}, {
+        serializers: _.extend({
+            children: {deserialize: widget.unpack_models}
+        }, widget.WidgetModel.serializers)
+    });
 
     var BoxView = widget.DOMWidgetView.extend({
         initialize: function(){
@@ -148,6 +155,7 @@ define([
     });
 
     return {
+        'BoxModel': BoxModel,
         'BoxView': BoxView,
         'FlexBoxView': FlexBoxView,
     };

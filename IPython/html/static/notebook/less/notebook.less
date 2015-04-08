@@ -8,12 +8,14 @@
 
 #ipython-main-app {
     .border-box-sizing();
+    height: 100%;
 }
 
 div#notebook_panel {
     margin: 0px;
     padding: 0px;
     .border-box-sizing();
+    height: 100%;
 }
 
 #notebook {
@@ -27,6 +29,7 @@ div#notebook_panel {
     margin: 0px;
     outline: none;
     .border-box-sizing();
+    min-height: 100%;
 }
 
 #notebook-container{
@@ -70,6 +73,7 @@ p {
 
 .end_space {
     min-height: 100px;
+    transition: height .2s ease;
 }
 
 .notebook_app #header {

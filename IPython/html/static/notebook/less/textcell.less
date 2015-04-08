@@ -1,5 +1,4 @@
 div.text_cell {
-    padding: 5px 5px 5px 0px;
     .hbox();
 }
 @media (max-width: @screen-xs-min) {
@@ -34,6 +33,10 @@ h1,h2,h3,h4,h5,h6 {
 
 .text_cell.rendered .input_area {
     display: none;
+}
+
+.text_cell.rendered .rendered_html {
+    overflow-x: auto;
 }
 
 .text_cell.unrendered .text_cell_render {

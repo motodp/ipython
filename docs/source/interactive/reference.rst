@@ -106,7 +106,7 @@ In this case, ``x = range(10000)`` is called as the line argument, and the
 block with ``min(x)`` and ``max(x)`` is called as the cell body.  The
 :magic:`timeit` magic receives both.
   
-If you have 'automagic' enabled (as it by default), you don't need to type in
+If you have 'automagic' enabled (as it is by default), you don't need to type in
 the single ``%`` explicitly for line magics; IPython will scan its internal
 list of magic functions and call one if it exists. With automagic on you can
 then just type ``cd mydir`` to go to directory 'mydir'::
@@ -853,7 +853,7 @@ Second, when using the ``PyOSInputHook`` approach, a GUI application should
 in IPython and as standalone apps need to have special code to detects how the
 application is being run. We highly recommend using IPython's support for this.
 Since the details vary slightly between toolkits, we point you to the various
-examples in our source directory :file:`examples/lib` that demonstrate
+examples in our source directory :file:`examples/Embedding` that demonstrate
 these capabilities.
 
 Third, unlike previous versions of IPython, we no longer "hijack" (replace
@@ -862,7 +862,7 @@ actually need to run the real event loops to do so. This is often needed to
 process pending events at critical points.
 
 Finally, we also have a number of examples in our source directory
-:file:`examples/lib` that demonstrate these capabilities.
+:file:`examples/Embedding` that demonstrate these capabilities.
 
 PyQt and PySide
 ---------------
@@ -871,14 +871,14 @@ PyQt and PySide
 
 When you use ``--gui=qt`` or ``--matplotlib=qt``, IPython can work with either
 PyQt4 or PySide.  There are three options for configuration here, because
-PyQt4 has two APIs for QString and QVariant - v1, which is the default on
+PyQt4 has two APIs for QString and QVariant: v1, which is the default on
 Python 2, and the more natural v2, which is the only API supported by PySide.
 v2 is also the default for PyQt4 on Python 3.  IPython's code for the QtConsole
 uses v2, but you can still use any interface in your code, since the
 Qt frontend is in a different process.
 
 The default will be to import PyQt4 without configuration of the APIs, thus
-matching what most applications would expect. It will fall back of PySide if
+matching what most applications would expect. It will fall back to PySide if
 PyQt4 is unavailable.
 
 If specified, IPython will respect the environment variable ``QT_API`` used

@@ -6,28 +6,30 @@ Represents a container that can be used to group other widgets.
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from .widget import DOMWidget, register
+from .widget import DOMWidget, Widget, register, widget_serialization
 from IPython.utils.traitlets import Unicode, Tuple, TraitError, Int, CaselessStrEnum
-from IPython.utils.warn import DeprecatedClass
+from .deprecated import DeprecatedClass
+
 
 @register('IPython.Box')
 class Box(DOMWidget):
     """Displays multiple widgets in a group."""
+    _model_name = Unicode('BoxModel', sync=True)
     _view_name = Unicode('BoxView', sync=True)
 
     # Child widgets in the container.
     # Using a tuple here to force reassignment to update the list.
     # When a proper notifying-list trait exists, that is what should be used here.
-    children = Tuple(sync=True, allow_none=False)
+    children = Tuple(sync=True, **widget_serialization)
     
     _overflow_values = ['visible', 'hidden', 'scroll', 'auto', 'initial', 'inherit', '']
     overflow_x = CaselessStrEnum(
         values=_overflow_values, 
-        default_value='', allow_none=False, sync=True, help="""Specifies what
+        default_value='', sync=True, help="""Specifies what
         happens to content that is too large for the rendered region.""")
     overflow_y = CaselessStrEnum(
         values=_overflow_values, 
-        default_value='', allow_none=False, sync=True, help="""Specifies what
+        default_value='', sync=True, help="""Specifies what
         happens to content that is too large for the rendered region.""")
 
     box_style = CaselessStrEnum(
@@ -59,10 +61,10 @@ class FlexBox(Box):
     _locations = ['start', 'center', 'end', 'baseline', 'stretch']
     pack = CaselessStrEnum(
         values=_locations, 
-        default_value='start', allow_none=False, sync=True)
+        default_value='start', sync=True)
     align = CaselessStrEnum(
         values=_locations, 
-        default_value='start', allow_none=False, sync=True)
+        default_value='start', sync=True)
 
 
 def VBox(*pargs, **kwargs):

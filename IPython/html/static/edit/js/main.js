@@ -27,15 +27,19 @@ require([
     savewidget,
     notificationarea
     ){
+    "use strict";
     page = new page.Page();
 
     var base_url = utils.get_body_data('baseUrl');
     var file_path = utils.get_body_data('filePath');
-    contents = new contents.Contents({base_url: base_url});
     var config = new configmod.ConfigSection('edit', {base_url: base_url});
     config.load();
     var common_config = new configmod.ConfigSection('common', {base_url: base_url});
     common_config.load();
+    contents = new contents.Contents({
+        base_url: base_url,
+        common_config: common_config
+    });
     
     var editor = new editmod.Editor('#texteditor-container', {
         base_url: base_url,
@@ -64,6 +68,7 @@ require([
         '#notification_area', {
         events: events,
     });
+    editor.notification_area = notification_area;
     notification_area.init_notification_widgets();
 
     utils.load_extensions_from_config(config);
@@ -79,18 +84,13 @@ require([
 
     // Make sure the codemirror editor is sized appropriatley.
     var _handle_resize = function() {
-        var header = $('#header');
+        var backdrop = $("#texteditor-backdrop");
 
-        // The header doesn't have a margin or padding above it.  Calculate
-        // the lower margin&padding by subtracting the innerHeight from the
-        // outerHeight.
-        var header_margin_bottom = header.outerHeight(true) - header.innerHeight();
-
-        // When scaling CodeMirror, subtract the header lower margin from the
-        // height twice.  Once for top padding and once for bottom padding.
-        $('div.CodeMirror').height(window.innerHeight - header.height() - 2*header_margin_bottom);
+        // account for padding on the backdrop wrapper
+        var padding = backdrop.outerHeight(true) - backdrop.height();
+        $('div.CodeMirror').height($("#site").height() - padding);
     };
-    window.onresize = _handle_resize;
+    $(window).resize(_handle_resize);
 
     // On document ready, resize codemirror.
     $(document).ready(_handle_resize);

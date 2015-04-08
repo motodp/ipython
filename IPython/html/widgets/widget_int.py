@@ -1,28 +1,21 @@
-"""Int class.  
+"""Int class.
 
 Represents an unbounded int using a widget.
 """
-#-----------------------------------------------------------------------------
-# Copyright (c) 2013, the IPython Development Team.
-#
+
+# Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-#
-# The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
 
-#-----------------------------------------------------------------------------
-# Imports
-#-----------------------------------------------------------------------------
 from .widget import DOMWidget, register
-from IPython.utils.traitlets import Unicode, CInt, Bool, CaselessStrEnum, Tuple
-from IPython.utils.warn import DeprecatedClass
+from .trait_types import Color
+from IPython.utils.traitlets import (Unicode, CInt, Bool, CaselessStrEnum,
+                                     Tuple, TraitError)
+from .deprecated import DeprecatedClass
 
-#-----------------------------------------------------------------------------
-# Classes
-#-----------------------------------------------------------------------------
+
 class _Int(DOMWidget):
     """Base class used to create widgets that represent an int."""
-    value = CInt(0, help="Int value", sync=True) 
+    value = CInt(0, help="Int value", sync=True)
     disabled = Bool(False, help="Enable or disable user changes", sync=True)
     description = Unicode(help="Description of the value this widget represents", sync=True)
 
@@ -31,34 +24,39 @@ class _Int(DOMWidget):
             kwargs['value'] = value
         super(_Int, self).__init__(**kwargs)
 
+
 class _BoundedInt(_Int):
     """Base class used to create widgets that represent a int that is bounded
     by a minium and maximum."""
-    step = CInt(1, help="Minimum step that the value can take (ignored by some views)", sync=True)
+    step = CInt(1, help="Minimum step to increment the value (ignored by some views)", sync=True)
     max = CInt(100, help="Max value", sync=True)
     min = CInt(0, help="Min value", sync=True)
 
     def __init__(self, *pargs, **kwargs):
         """Constructor"""
         super(_BoundedInt, self).__init__(*pargs, **kwargs)
-        self.on_trait_change(self._validate_value, ['value'])
-        self.on_trait_change(self._handle_max_changed, ['max'])
-        self.on_trait_change(self._handle_min_changed, ['min'])
 
-    def _validate_value(self, name, old, new):
-        """Validate value."""
-        if self.min > new or new > self.max:
-            self.value = min(max(new, self.min), self.max)
+    def _value_validate(self, value, trait):
+        """Cap and floor value"""
+        if self.min > value or self.max < value:
+            value = min(max(value, self.min), self.max)
+        return value
 
-    def _handle_max_changed(self, name, old, new):
-        """Make sure the min is always <= the max."""
-        if new < self.min:
-            raise ValueError("setting max < min")
+    def _min_validate(self, min, trait):
+        """Enforce min <= value <= max"""
+        if min > self.max:
+            raise TraitError("Setting min > max")
+        if min > self.value:
+            self.value = min
+        return min
 
-    def _handle_min_changed(self, name, old, new):
-        """Make sure the max is always >= the min."""
-        if new > self.max:
-            raise ValueError("setting min > max")
+    def _max_validate(self, max, trait):
+        """Enforce min <= value <= max"""
+        if max < self.min:
+            raise TraitError("setting max < min")
+        if max < self.value:
+            self.value = max
+        return max
 
 @register('IPython.IntText')
 class IntText(_Int):
@@ -77,11 +75,10 @@ class IntSlider(_BoundedInt):
     """Slider widget that represents a int bounded by a minimum and maximum value."""
     _view_name = Unicode('IntSliderView', sync=True)
     orientation = CaselessStrEnum(values=['horizontal', 'vertical'], 
-        default_value='horizontal', allow_none=False, 
-        help="Vertical or horizontal.", sync=True)
+        default_value='horizontal', help="Vertical or horizontal.", sync=True)
     _range = Bool(False, help="Display a range selector", sync=True)
     readout = Bool(True, help="Display the current value of the slider next to it.", sync=True)
-    slider_color = Unicode(sync=True)
+    slider_color = Color(None, allow_none=True, sync=True)
 
 
 @register('IPython.IntProgress')
@@ -189,11 +186,10 @@ class IntRangeSlider(_BoundedIntRange):
     """Slider widget that represents a pair of ints between a minimum and maximum value."""
     _view_name = Unicode('IntSliderView', sync=True)
     orientation = CaselessStrEnum(values=['horizontal', 'vertical'], 
-        default_value='horizontal', allow_none=False, 
-        help="Vertical or horizontal.", sync=True)
+        default_value='horizontal', help="Vertical or horizontal.", sync=True)
     _range = Bool(True, help="Display a range selector", sync=True)
     readout = Bool(True, help="Display the current value of the slider next to it.", sync=True)
-    slider_color = Unicode(sync=True)
+    slider_color = Color(None, allow_none=True, sync=True)
 
 # Remove in IPython 4.0
 IntTextWidget = DeprecatedClass(IntText, 'IntTextWidget')

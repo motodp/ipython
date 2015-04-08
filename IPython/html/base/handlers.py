@@ -119,6 +119,11 @@ class IPythonHandler(AuthenticatedHandler):
             return Application.instance().log
         else:
             return app_log
+
+    @property
+    def jinja_template_vars(self):
+        """User-supplied values to supply to jinja templates."""
+        return self.settings.get('jinja_template_vars', {})
     
     #---------------------------------------------------------------
     # URLs
@@ -136,6 +141,10 @@ class IPythonHandler(AuthenticatedHandler):
     @property
     def base_url(self):
         return self.settings.get('base_url', '/')
+
+    @property
+    def default_url(self):
+        return self.settings.get('default_url', '')
 
     @property
     def ws_url(self):
@@ -238,6 +247,7 @@ class IPythonHandler(AuthenticatedHandler):
     def template_namespace(self):
         return dict(
             base_url=self.base_url,
+            default_url=self.default_url,
             ws_url=self.ws_url,
             logged_in=self.logged_in,
             login_available=self.login_available,
@@ -245,6 +255,7 @@ class IPythonHandler(AuthenticatedHandler):
             sys_info=sys_info,
             contents_js_source=self.contents_js_source,
             version_hash=self.version_hash,
+            **self.jinja_template_vars
         )
     
     def get_json_body(self):
@@ -399,7 +410,7 @@ class FileFindHandler(web.StaticFileHandler):
         # disable browser caching, rely on 304 replies for savings
         if "v" not in self.request.arguments or \
                 any(self.request.path.startswith(path) for path in self.no_cache_paths):
-            self.add_header("Cache-Control", "no-cache")
+            self.set_header("Cache-Control", "no-cache")
     
     def initialize(self, path, default_filename=None, no_cache_paths=None):
         self.no_cache_paths = no_cache_paths or []

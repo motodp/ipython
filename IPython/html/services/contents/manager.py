@@ -81,14 +81,14 @@ class ContentsManager(LoggingConfigurable):
         such as removing notebook outputs or other side effects that
         should not be saved.
 
-        It will be called as (all arguments passed by keyword):
+        It will be called as (all arguments passed by keyword)::
 
             hook(path=path, model=model, contents_manager=self)
 
-        model: the model to be saved. Includes file contents.
-               modifying this dict will affect the file that is stored.
-        path: the API path of the save destination
-        contents_manager: this ContentsManager instance
+        - model: the model to be saved. Includes file contents.
+          Modifying this dict will affect the file that is stored.
+        - path: the API path of the save destination
+        - contents_manager: this ContentsManager instance
         """
     )
     def _pre_save_hook_changed(self, name, old, new):
@@ -109,7 +109,7 @@ class ContentsManager(LoggingConfigurable):
 
     checkpoints_class = Type(Checkpoints, config=True)
     checkpoints = Instance(Checkpoints, config=True)
-    checkpoints_kwargs = Dict(allow_none=False, config=True)
+    checkpoints_kwargs = Dict(config=True)
 
     def _checkpoints_default(self):
         return self.checkpoints_class(**self.checkpoints_kwargs)
@@ -222,6 +222,9 @@ class ContentsManager(LoggingConfigurable):
 
     def delete(self, path):
         """Delete a file/directory and any associated checkpoints."""
+        path = path.strip('/')
+        if not path:
+            raise HTTPError(400, "Can't delete root")
         self.delete_file(path)
         self.checkpoints.delete_all_checkpoints(path)
 

@@ -8,6 +8,7 @@ import os
 import json
 import struct
 import warnings
+import sys
 
 try:
     from urllib.parse import urlparse # Py 3
@@ -19,7 +20,7 @@ from tornado import gen, ioloop, web
 from tornado.websocket import WebSocketHandler
 
 from IPython.kernel.zmq.session import Session
-from IPython.utils.jsonutil import date_default, extract_dates
+from jupyter_client.jsonutil import date_default, extract_dates
 from IPython.utils.py3compat import cast_unicode
 
 from .handlers import IPythonHandler
@@ -43,6 +44,8 @@ def serialize_binary_message(msg):
     # don't modify msg or buffer list in-place
     msg = msg.copy()
     buffers = list(msg.pop('buffers'))
+    if sys.version_info < (3, 4):
+        buffers = [x.tobytes() for x in buffers]
     bmsg = json.dumps(msg, default=date_default).encode('utf8')
     buffers.insert(0, bmsg)
     nbufs = len(buffers)
@@ -94,11 +97,23 @@ if os.environ.get('IPYTHON_ALLOW_DRAFT_WEBSOCKETS_FOR_PHANTOMJS', False):
 
 class ZMQStreamHandler(WebSocketHandler):
     
+    if tornado.version_info < (4,1):
+        """Backport send_error from tornado 4.1 to 4.0"""
+        def send_error(self, *args, **kwargs):
+            if self.stream is None:
+                super(WebSocketHandler, self).send_error(*args, **kwargs)
+            else:
+                # If we get an uncaught exception during the handshake,
+                # we have no choice but to abruptly close the connection.
+                # TODO: for uncaught exceptions after the handshake,
+                # we can close the connection more gracefully.
+                self.stream.close()
+
+    
     def check_origin(self, origin):
         """Check Origin == Host or Access-Control-Allow-Origin.
         
         Tornado >= 4 calls this method automatically, raising 403 if it returns False.
-        We call it explicitly in `open` on Tornado < 4.
         """
         if self.allow_origin == '*':
             return True
@@ -160,7 +175,10 @@ class ZMQStreamHandler(WebSocketHandler):
     def _on_zmq_reply(self, stream, msg_list):
         # Sometimes this gets triggered when the on_close method is scheduled in the
         # eventloop but hasn't been called.
-        if stream.closed(): return
+        if self.stream.closed() or stream.closed():
+            self.log.warn("zmq message arrived on closed channel")
+            self.close()
+            return
         channel = getattr(stream, 'channel', None)
         try:
             msg = self._reserialize_reply(msg_list, channel=channel)

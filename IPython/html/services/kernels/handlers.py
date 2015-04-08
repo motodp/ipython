@@ -9,7 +9,7 @@ from tornado import gen, web
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
 
-from IPython.utils.jsonutil import date_default
+from jupyter_client.jsonutil import date_default
 from IPython.utils.py3compat import cast_unicode
 from IPython.html.utils import url_path_join, url_escape
 
@@ -160,7 +160,7 @@ class ZMQChannelsHandler(AuthenticatedZMQStreamHandler):
         protocol_version = info.get('protocol_version', kernel_protocol_version)
         if protocol_version != kernel_protocol_version:
             self.session.adapt_version = int(protocol_version.split('.')[0])
-            self.log.info("Kernel %s speaks protocol %s", self.kernel_id, protocol_version)
+            self.log.info("Adapting to protocol v%s for kernel %s", protocol_version, self.kernel_id)
         if not self._kernel_info_future.done():
             self._kernel_info_future.set_result(info)
     
@@ -179,6 +179,8 @@ class ZMQChannelsHandler(AuthenticatedZMQStreamHandler):
         # then request kernel info, waiting up to a certain time before giving up.
         # We don't want to wait forever, because browsers don't take it well when
         # servers never respond to websocket connection requests.
+        kernel = self.kernel_manager.get_kernel(self.kernel_id)
+        self.session.key = kernel.session.key
         future = self.request_kernel_info()
         
         def give_up():
@@ -214,6 +216,10 @@ class ZMQChannelsHandler(AuthenticatedZMQStreamHandler):
                 stream.on_recv_stream(self._on_zmq_reply)
 
     def on_message(self, msg):
+        if not self.channels:
+            # already closed, ignore the message
+            self.log.debug("Received message on closed websocket %r", msg)
+            return
         if isinstance(msg, bytes):
             msg = deserialize_binary_message(msg)
         else:
@@ -222,6 +228,9 @@ class ZMQChannelsHandler(AuthenticatedZMQStreamHandler):
         if channel is None:
             self.log.warn("No channel specified, assuming shell: %s", msg)
             channel = 'shell'
+        if channel not in self.channels:
+            self.log.warn("No such channel: %r", channel)
+            return
         stream = self.channels[channel]
         self.session.send(stream, msg)
 

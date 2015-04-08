@@ -4,18 +4,19 @@
 }
 
 .indicator_area {
+    .pull-right();
     color: @navbar-default-link-color;
     margin-left: 5px;
     margin-right: 5px;
     width: 11px;
     z-index: 10;
     text-align: center;
+    width: auto;
 }
 
 #kernel_indicator {
-    .pull-right();
     .indicator_area();
-    width: auto;
+    
     border-left: 1px solid;
     
     .kernel_indicator_name {
@@ -29,8 +30,25 @@
     .indicator_area();
 }
 
+#readonly-indicator {
+    .pull-right();
+    .indicator_area();
+
+    margin-top: 2px;
+    margin-bottom: 0px;
+    margin-left: 0px;
+    margin-right: 0px;
+
+    // Start out hidden.
+    display: none;
+}
+
+.modal_indicator:before {
+    .fa-fw();
+}
+
 .edit_mode .modal_indicator:before {
-    .icon(@fa-var-pencil)
+    .icon(@fa-var-pencil);
 }
 
 .command_mode .modal_indicator:before {

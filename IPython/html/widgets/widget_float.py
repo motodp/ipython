@@ -1,27 +1,20 @@
-"""Float class.  
+"""Float class.
 
 Represents an unbounded float using a widget.
 """
-#-----------------------------------------------------------------------------
-# Copyright (c) 2013, the IPython Development Team.
-#
+
+# Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-#
-# The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
 
-#-----------------------------------------------------------------------------
-# Imports
-#-----------------------------------------------------------------------------
 from .widget import DOMWidget, register
-from IPython.utils.traitlets import Unicode, CFloat, Bool, CaselessStrEnum, Tuple
-from IPython.utils.warn import DeprecatedClass
+from .trait_types import Color
+from IPython.utils.traitlets import (Unicode, CFloat, Bool, CaselessStrEnum,
+                                     Tuple, TraitError)
+from .deprecated import DeprecatedClass
 
-#-----------------------------------------------------------------------------
-# Classes
-#-----------------------------------------------------------------------------
+
 class _Float(DOMWidget):
-    value = CFloat(0.0, help="Float value", sync=True) 
+    value = CFloat(0.0, help="Float value", sync=True)
     disabled = Bool(False, help="Enable or disable user changes", sync=True)
     description = Unicode(help="Description of the value this widget represents", sync=True)
 
@@ -30,21 +23,37 @@ class _Float(DOMWidget):
             kwargs['value'] = value
         super(_Float, self).__init__(**kwargs)
 
+
 class _BoundedFloat(_Float):
     max = CFloat(100.0, help="Max value", sync=True)
     min = CFloat(0.0, help="Min value", sync=True)
-    step = CFloat(0.1, help="Minimum step that the value can take (ignored by some views)", sync=True)
+    step = CFloat(0.1, help="Minimum step to increment the value (ignored by some views)", sync=True)
 
     def __init__(self, *pargs, **kwargs):
         """Constructor"""
         super(_BoundedFloat, self).__init__(*pargs, **kwargs)
-        self._validate('value', None, self.value)
-        self.on_trait_change(self._validate, ['value', 'min', 'max'])
 
-    def _validate(self, name, old, new):
-        """Validate value, max, min."""
-        if self.min > new or new > self.max:
-            self.value = min(max(new, self.min), self.max)
+    def _value_validate(self, value, trait):
+        """Cap and floor value"""
+        if self.min > value or self.max < value:
+            value = min(max(value, self.min), self.max)
+        return value
+
+    def _min_validate(self, min, trait):
+        """Enforce min <= value <= max"""
+        if min > self.max:
+            raise TraitError("Setting min > max")
+        if min > self.value:
+            self.value = min
+        return min
+
+    def _max_validate(self, max, trait):
+        """Enforce min <= value <= max"""
+        if max < self.min:
+            raise TraitError("setting max < min")
+        if max < self.value:
+            self.value = max
+        return max
 
 
 @register('IPython.FloatText')
@@ -57,9 +66,9 @@ class FloatText(_Float):
 	value : float
 	    value displayed
 	description : str
-	    description displayed next to the textbox   
+	    description displayed next to the text box
 	color : str Unicode color code (eg. '#C13535'), optional
-	    color of the value displayed   
+	    color of the value displayed
     """
     _view_name = Unicode('FloatTextView', sync=True)
 
@@ -112,11 +121,10 @@ class FloatSlider(_BoundedFloat):
     """
     _view_name = Unicode('FloatSliderView', sync=True)
     orientation = CaselessStrEnum(values=['horizontal', 'vertical'], 
-        default_value='horizontal', 
-        help="Vertical or horizontal.", allow_none=False, sync=True)
+        default_value='horizontal', help="Vertical or horizontal.", sync=True)
     _range = Bool(False, help="Display a range selector", sync=True)
     readout = Bool(True, help="Display the current value of the slider next to it.", sync=True)
-    slider_color = Unicode(sync=True)
+    slider_color = Color(None, allow_none=True, sync=True)
 
 
 @register('IPython.FloatProgress')
@@ -267,11 +275,10 @@ class FloatRangeSlider(_BoundedFloatRange):
     """
     _view_name = Unicode('FloatSliderView', sync=True)
     orientation = CaselessStrEnum(values=['horizontal', 'vertical'], 
-        default_value='horizontal', allow_none=False, 
-        help="Vertical or horizontal.", sync=True)
+        default_value='horizontal', help="Vertical or horizontal.", sync=True)
     _range = Bool(True, help="Display a range selector", sync=True)
     readout = Bool(True, help="Display the current value of the slider next to it.", sync=True)
-    slider_color = Unicode(sync=True)
+    slider_color = Color(None, allow_none=True, sync=True)
 
 # Remove in IPython 4.0
 FloatTextWidget = DeprecatedClass(FloatText, 'FloatTextWidget')

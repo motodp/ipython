@@ -26,6 +26,7 @@ define([
         this.outputs = [];
         this.collapsed = false;
         this.scrolled = false;
+        this.scroll_state = 'auto';
         this.trusted = true;
         this.clear_queued = null;
         if (options.prompt_area === undefined) {
@@ -72,24 +73,28 @@ define([
 
     /**
      * Should the OutputArea scroll?
-     * Returns whether the height (in lines) exceeds a threshold.
-     *
-     * @private
-     * @method _should_scroll
-     * @param [lines=100]{Integer}
-     * @return {Bool}
+     * Returns whether the height (in lines) exceeds the current threshold.
+     * Threshold will be OutputArea.minimum_scroll_threshold if scroll_state=true (manually requested)
+     * or OutputArea.auto_scroll_threshold if scroll_state='auto'.
+     * This will always return false if scroll_state=false (scroll disabled).
      *
      */
-    OutputArea.prototype._should_scroll = function (lines) {
-        if (lines <=0 ){ return; }
-        if (!lines) {
-            lines = 100;
+    OutputArea.prototype._should_scroll = function () {
+        var threshold;
+        if (this.scroll_state === false) {
+            return false;
+        } else if (this.scroll_state === true) {
+            threshold = OutputArea.minimum_scroll_threshold;
+        } else {
+            threshold = OutputArea.auto_scroll_threshold;
+        }
+        if (threshold <=0) {
+            return false;
         }
         // line-height from http://stackoverflow.com/questions/1185151
         var fontSize = this.element.css('font-size');
         var lineHeight = Math.floor(parseInt(fontSize.replace('px','')) * 1.5);
-        
-        return (this.element.height() > lines * lineHeight);
+        return (this.element.height() > threshold * lineHeight);
     };
 
 
@@ -105,7 +110,7 @@ define([
             }
             // maybe scroll output,
             // if it's grown large enough and hasn't already been scrolled.
-            if ( !that.scrolled && that._should_scroll(OutputArea.auto_scroll_threshold)) {
+            if (!that.scrolled && that._should_scroll()) {
                 that.scroll_area();
             }
         });
@@ -123,6 +128,8 @@ define([
                 this.collapse_button.show();
             }
             this.collapsed = true;
+            // collapsing output clears scroll state
+            this.scroll_state = 'auto';
         }
     };
 
@@ -131,8 +138,11 @@ define([
         if (this.collapsed) {
             this.collapse_button.hide();
             this.element.show();
-            this.prompt_overlay.show();
+            if (this.prompt_area) {
+                this.prompt_overlay.show();
+            }
             this.collapsed = false;
+            this.scroll_if_long();
         }
     };
 
@@ -160,34 +170,30 @@ define([
     };
 
     /**
+     * Scroll OutputArea if height exceeds a threshold.
      *
-     * Scroll OutputArea if height supperior than a threshold (in lines).
-     *
-     * Threshold is a maximum number of lines. If unspecified, defaults to
-     * OutputArea.minimum_scroll_threshold.
-     *
-     * Negative threshold will prevent the OutputArea from ever scrolling.
-     *
-     * @method scroll_if_long
-     *
-     * @param [lines=20]{Number} Default to 20 if not set,
-     * behavior undefined for value of `0`.
+     * Threshold is OutputArea.minimum_scroll_threshold if scroll_state = true,
+     * OutputArea.auto_scroll_threshold if scroll_state='auto'.
      *
      **/
-    OutputArea.prototype.scroll_if_long = function (lines) {
-        var n = lines || OutputArea.minimum_scroll_threshold;
-        if(n <= 0){
-            return;
-        }
-
-        if (this._should_scroll(n)) {
+    OutputArea.prototype.scroll_if_long = function () {
+        var should_scroll = this._should_scroll();
+        if (!this.scrolled && should_scroll) {
             // only allow scrolling long-enough output
             this.scroll_area();
+        } else if (this.scrolled && !should_scroll) {
+            // scrolled and shouldn't be
+            this.unscroll_area();
         }
     };
 
 
     OutputArea.prototype.toggle_scroll = function () {
+        if (this.scroll_state == 'auto') {
+            this.scroll_state = !this.scrolled;
+        } else {
+            this.scroll_state = !this.scroll_state;
+        }
         if (this.scrolled) {
             this.unscroll_area();
         } else {
@@ -212,11 +218,9 @@ define([
             json.name = content.name;
         } else if (msg_type === "display_data") {
             json.data = content.data;
-            json.output_type = msg_type;
             json.metadata = content.metadata;
         } else if (msg_type === "execute_result") {
             json.data = content.data;
-            json.output_type = msg_type;
             json.metadata = content.metadata;
             json.execution_count = content.execution_count;
         } else if (msg_type === "error") {
@@ -480,6 +484,7 @@ define([
                 last.text = utils.fixCarriageReturn(last.text + json.text);
                 var pre = this.element.find('div.'+subclass).last().find('pre');
                 var html = utils.fixConsole(last.text);
+                html = utils.autoLinkUrls(html);
                 // The only user content injected with this HTML call is
                 // escaped by the fixConsole() method.
                 pre.html(html);
@@ -517,7 +522,7 @@ define([
                 .attr("href", "#")
                 .text("Unrecognized output: " + json.output_type)
                 .click(function () {
-                    that.events.trigger('unrecognized_output.OutputArea', {output: json})
+                    that.events.trigger('unrecognized_output.OutputArea', {output: json});
                 })
         );
         this._safe_append(toinsert);
@@ -583,6 +588,7 @@ define([
         var toinsert = this.create_output_subarea(md, "output_html rendered_html", type);
         this.keyboard_manager.register_events(toinsert);
         toinsert.append(html);
+        dblclick_to_reset_size(toinsert.find('img'));
         element.append(toinsert);
         return toinsert;
     };
@@ -598,6 +604,7 @@ define([
             html = mathjaxutils.replace_math(html, math);
             toinsert.append(html);
         });
+        dblclick_to_reset_size(toinsert.find('img'));
         element.append(toinsert);
         return toinsert;
     };
@@ -656,12 +663,6 @@ define([
             .width(width)
             .height(height);
 
-        // The jQuery resize handlers don't seem to work on the svg element.
-        // When the svg renders completely, measure it's size and set the parent
-        // div to that size.  Then set the svg to 100% the size of the parent
-        // div and make the parent div resizable.  
-        this._dblclick_to_reset_size(svg_area, true, false);
-
         svg_area.append(svg);
         toinsert.append(svg_area);
         element.append(toinsert);
@@ -669,44 +670,21 @@ define([
         return toinsert;
     };
 
-    OutputArea.prototype._dblclick_to_reset_size = function (img, immediately, resize_parent) {
+    function dblclick_to_reset_size (img) {
         /**
-         * Add a resize handler to an element
+         * Double-click on an image toggles confinement to notebook width
          *
          * img: jQuery element
-         * immediately: bool=False
-         *      Wait for the element to load before creating the handle.
-         * resize_parent: bool=True
-         *      Should the parent of the element be resized when the element is
-         *      reset (by double click).
          */
-        var callback = function (){
-            var h0 = img.height();
-            var w0 = img.width();
-            if (!(h0 && w0)) {
-                // zero size, don't make it resizable
-                return;
-            }
-            img.resizable({
-                aspectRatio: true,
-                autoHide: true
-            });
-            img.dblclick(function () {
-                // resize wrapper & image together for some reason:
-                img.height(h0);
-                img.width(w0);
-                if (resize_parent === undefined || resize_parent) {
-                    img.parent().height(h0);
-                    img.parent().width(w0);
-                }
-            });
-        };
 
-        if (immediately) {
-            callback();
-        } else {
-            img.on("load", callback);
-        }
+        img.dblclick(function () {
+            // dblclick toggles *raw* size, disabling max-width confinement.
+            if (img.hasClass('unconfined')) {
+                img.removeClass('unconfined');
+            } else {
+                img.addClass('unconfined');
+            }
+        });
     };
     
     var set_width_height = function (img, md, mime) {
@@ -717,6 +695,9 @@ define([
         if (height !== undefined) img.attr('height', height);
         var width = _get_metadata_key(md, 'width', mime);
         if (width !== undefined) img.attr('width', width);
+        if (_get_metadata_key(md, 'unconfined', mime)) {
+            img.addClass('unconfined');
+        }
     };
     
     var append_png = function (png, md, element, handle_inserted) {
@@ -730,7 +711,7 @@ define([
         }
         img[0].src = 'data:image/png;base64,'+ png;
         set_width_height(img, md, 'image/png');
-        this._dblclick_to_reset_size(img);
+        dblclick_to_reset_size(img);
         toinsert.append(img);
         element.append(toinsert);
         return toinsert;
@@ -748,7 +729,7 @@ define([
         }
         img[0].src = 'data:image/jpeg;base64,'+ jpeg;
         set_width_height(img, md, 'image/jpeg');
-        this._dblclick_to_reset_size(img);
+        dblclick_to_reset_size(img);
         toinsert.append(img);
         element.append(toinsert);
         return toinsert;
@@ -905,19 +886,19 @@ define([
         for (var i=0; i<len; i++) {
             this.append_output(outputs[i]);
         }
-
         if (metadata.collapsed !== undefined) {
-            this.collapsed = metadata.collapsed;
             if (metadata.collapsed) {
-                this.collapse_output();
+                this.collapse();
+            } else {
+                this.expand();
             }
         }
-        if (metadata.autoscroll !== undefined) {
-            this.collapsed = metadata.collapsed;
-            if (metadata.collapsed) {
-                this.collapse_output();
+        if (metadata.scrolled !== undefined) {
+            this.scroll_state = metadata.scrolled;
+            if (metadata.scrolled) {
+                this.scroll_if_long();
             } else {
-                this.expand_output();
+                this.unscroll_area();
             }
         }
     };

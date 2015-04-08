@@ -25,7 +25,6 @@ from IPython.core.inputsplitter import IPythonInputSplitter
 from IPython.core.interactiveshell import InteractiveShell, InteractiveShellABC
 from IPython.core.magic import Magics, magics_class, line_magic
 from IPython.lib.clipboard import ClipboardEmpty
-from IPython.testing.skipdoctest import skip_doctest
 from IPython.utils.encoding import get_stream_enc
 from IPython.utils import py3compat
 from IPython.utils.terminal import toggle_set_term_title, set_term_title
@@ -66,7 +65,7 @@ def get_pasted_lines(sentinel, l_input=py3compat.input, quiet=False):
         prompt = ""
     while True:
         try:
-            l = l_input(prompt)
+            l = py3compat.str_to_unicode(l_input(prompt))
             if l == sentinel:
                 return
             else:
@@ -130,7 +129,6 @@ class TerminalMagics(Magics):
         self.shell.set_autoindent()
         print("Automatic indentation is:",['OFF','ON'][self.shell.autoindent])
 
-    @skip_doctest
     @line_magic
     def cpaste(self, parameter_s=''):
         """Paste & execute a pre-formatted code block from clipboard.
@@ -181,7 +179,7 @@ class TerminalMagics(Magics):
 
         quiet = ('q' in opts)
 
-        sentinel = opts.get('s', '--')
+        sentinel = opts.get('s', u'--')
         block = '\n'.join(get_pasted_lines(sentinel, quiet=quiet))
         self.store_or_execute(block, name)
 

@@ -75,7 +75,7 @@ define([
         /** create and open a new notebook */
         var that = this;
         kernel_name = kernel_name || this.default_kernel;
-        var w = window.open();
+        var w = window.open(undefined, IPython._target);
         this.contents.new_untitled(that.notebook_path, {type: "notebook"}).then(
             function (data) {
                 var url = utils.url_join_encode(
@@ -85,16 +85,20 @@ define([
                     url += "?kernel_name=" + kernel_name;
                 }
                 w.location = url;
-            },
-            function (error) {
-                w.close();
-                dialog.modal({
-                    title : 'Creating Notebook Failed',
-                    body : "The error was: " + error.message,
-                    buttons : {'OK' : {'class' : 'btn-primary'}}
-                });
-            }
-        );
+        }).catch(function (e) {
+            w.close();
+            dialog.modal({
+                title : 'Creating Notebook Failed',
+                body : $('<div/>')
+                    .text("An error occurred while creating a new notebook.")
+                    .append($('<div/>')
+                        .addClass('alert alert-danger')
+                        .text(e.message || e)),
+                buttons: {
+                    OK: {'class' : 'btn-primary'}
+                }
+            });
+        });
     };
     
     return {'NewNotebookWidget': NewNotebookWidget};

@@ -8,7 +8,7 @@ import json
 from tornado import gen, web
 
 from IPython.html.utils import url_path_join, url_escape
-from IPython.utils.jsonutil import date_default
+from jupyter_client.jsonutil import date_default
 
 from IPython.html.base.handlers import (
     IPythonHandler, json_errors, path_regex,
@@ -117,13 +117,19 @@ class ContentsHandler(IPythonHandler):
         format = self.get_query_argument('format', default=None)
         if format not in {None, 'text', 'base64'}:
             raise web.HTTPError(400, u'Format %r is invalid' % format)
-
-        model = yield gen.maybe_future(self.contents_manager.get(path=path, type=type, format=format))
-        if model['type'] == 'directory':
+        content = self.get_query_argument('content', default='1')
+        if content not in {'0', '1'}:
+            raise web.HTTPError(400, u'Content %r is invalid' % content)
+        content = int(content)
+        
+        model = yield gen.maybe_future(self.contents_manager.get(
+            path=path, type=type, format=format, content=content,
+        ))
+        if model['type'] == 'directory' and content:
             # group listing by type, then by name (case-insensitive)
             # FIXME: sorting should be done in the frontends
             model['content'].sort(key=sort_key)
-        validate_model(model, expect_content=True)
+        validate_model(model, expect_content=content)
         self._finish_model(model, location=False)
 
     @web.authenticated

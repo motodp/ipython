@@ -24,9 +24,16 @@ from IPython.nbformat.v4 import (
 )
 from IPython.nbformat import v2
 from IPython.utils import py3compat
-from IPython.utils.data import uniq_stable
 from IPython.utils.tempdir import TemporaryDirectory
 
+def uniq_stable(elems):
+    """uniq_stable(elems) -> list
+
+    Return from an iterable, a list of all the unique elements in the input,
+    maintaining the order in which they first appear.
+    """
+    seen = set()
+    return [x for x in elems if x not in seen and not seen.add(x)]
 
 def notebooks_only(dir_model):
     return [nb for nb in dir_model['content'] if nb['type']=='notebook']
@@ -51,12 +58,14 @@ class API(object):
     def list(self, path='/'):
         return self._req('GET', path)
 
-    def read(self, path, type=None, format=None):
+    def read(self, path, type=None, format=None, content=None):
         params = {}
         if type is not None:
             params['type'] = type
         if format is not None:
             params['format'] = format
+        if content == False:
+            params['content'] = '0'
         return self._req('GET', path, params=params)
 
     def create_untitled(self, path='/', ext='.ipynb'):
@@ -243,6 +252,14 @@ class APITest(NotebookTestBase):
         dir_names = {normalize('NFC', d['name']) for d in dirs}
         self.assertEqual(dir_names, self.top_level_dirs)  # Excluding hidden dirs
 
+    def test_get_dir_no_content(self):
+        for d in self.dirs:
+            model = self.api.read(d, content=False).json()
+            self.assertEqual(model['path'], d)
+            self.assertEqual(model['type'], 'directory')
+            self.assertIn('content', model)
+            self.assertEqual(model['content'], None)
+
     def test_list_nonexistant_dir(self):
         with assert_http_error(404):
             self.api.list('nonexistant')
@@ -256,9 +273,18 @@ class APITest(NotebookTestBase):
             self.assertEqual(nb['type'], 'notebook')
             self.assertIn('content', nb)
             self.assertEqual(nb['format'], 'json')
-            self.assertIn('content', nb)
             self.assertIn('metadata', nb['content'])
             self.assertIsInstance(nb['content']['metadata'], dict)
+
+    def test_get_nb_no_content(self):
+        for d, name in self.dirs_nbs:
+            path = url_path_join(d, name + '.ipynb')
+            nb = self.api.read(path, content=False).json()
+            self.assertEqual(nb['name'], u'%s.ipynb' % name)
+            self.assertEqual(nb['path'], path)
+            self.assertEqual(nb['type'], 'notebook')
+            self.assertIn('content', nb)
+            self.assertEqual(nb['content'], None)
 
     def test_get_contents_no_such_file(self):
         # Name that doesn't exist - should be a 404
@@ -489,6 +515,38 @@ class APITest(NotebookTestBase):
         self.assertIn('z.ipynb', nbnames)
         self.assertNotIn('a.ipynb', nbnames)
 
+    def test_checkpoints_follow_file(self):
+
+        # Read initial file state
+        orig = self.api.read('foo/a.ipynb')
+
+        # Create a checkpoint of initial state
+        r = self.api.new_checkpoint('foo/a.ipynb')
+        cp1 = r.json()
+
+        # Modify file and save
+        nbcontent = json.loads(orig.text)['content']
+        nb = from_dict(nbcontent)
+        hcell = new_markdown_cell('Created by test')
+        nb.cells.append(hcell)
+        nbmodel = {'content': nb, 'type': 'notebook'}
+        self.api.save('foo/a.ipynb', body=json.dumps(nbmodel))
+
+        # Rename the file.
+        self.api.rename('foo/a.ipynb', 'foo/z.ipynb')
+
+        # Looking for checkpoints in the old location should yield no results.
+        self.assertEqual(self.api.get_checkpoints('foo/a.ipynb').json(), [])
+
+        # Looking for checkpoints in the new location should work.
+        cps = self.api.get_checkpoints('foo/z.ipynb').json()
+        self.assertEqual(cps, [cp1])
+
+        # Delete the file.  The checkpoint should be deleted as well.
+        self.api.delete('foo/z.ipynb')
+        cps = self.api.get_checkpoints('foo/z.ipynb').json()
+        self.assertEqual(cps, [])
+
     def test_rename_existing(self):
         with assert_http_error(409):
             self.api.rename('foo/a.ipynb', 'foo/b.ipynb')
@@ -499,7 +557,7 @@ class APITest(NotebookTestBase):
         nb = from_dict(nbcontent)
         nb.cells.append(new_markdown_cell(u'Created by test ³'))
 
-        nbmodel= {'content': nb, 'type': 'notebook'}
+        nbmodel = {'content': nb, 'type': 'notebook'}
         resp = self.api.save('foo/a.ipynb', body=json.dumps(nbmodel))
 
         nbcontent = self.api.read('foo/a.ipynb').json()['content']

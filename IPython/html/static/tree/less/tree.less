@@ -13,6 +13,9 @@
 @btn_mini_height: 22px;
 @dark_dashboard_color: @breadcrumb-color;
 
+// The left padding of the selector button's contents.
+@dashboard-selectorbtn-lpad: 7px;
+
 ul#tabs {
     margin-bottom: @dashboard_tb_pad;
 }
@@ -45,12 +48,26 @@ ul.breadcrumb {
     }
 }
 
+.dynamic-buttons {
+    padding-top: @dashboard_tb_pad - 1px;
+    display: inline-block;
+}
+
 .list_toolbar [class*="span"] {
     min-height: @btn_small_height;
 }
 
 .list_header {
     font-weight: bold;
+    background-color: @page-backdrop-color
+}
+
+.list_placeholder {
+    font-weight: bold;
+    padding-top: @dashboard_tb_pad;
+    padding-bottom: @dashboard_tb_pad;
+    padding-left: @dashboard_lr_pad;
+    padding-right: @dashboard_lr_pad;
 }
 
 .list_container {
@@ -76,6 +93,9 @@ ul.breadcrumb {
     background-color: @table-border-color;
   };
   a {text-decoration: none;}
+  &:hover {
+    background-color: darken(white,2%);
+  }
 }
 
 .action_col {
@@ -88,6 +108,25 @@ ul.breadcrumb {
     padding-left: @dashboard_lr_pad;
     padding-right: @dashboard_lr_pad;
     line-height: @btn_mini_height;
+
+    input {
+        margin-right: @dashboard_lr_pad;
+        margin-left: @dashboard_lr_pad + @dashboard-selectorbtn-lpad;
+        vertical-align: baseline;
+        line-height: @btn_mini_height;
+        position: relative;
+        top: -1px;
+    }
+
+    .item_link {
+        margin-left: -1px;
+        vertical-align: baseline;
+        line-height: @btn_mini_height;
+    }
+}
+
+.new-file input[type=checkbox] {
+    visibility: hidden;
 }
 
 .item_name {
@@ -99,14 +138,21 @@ ul.breadcrumb {
     font-size: 14px; 
     color: @dark_dashboard_color;
     margin-right: @dashboard_lr_pad;
+    margin-left: @dashboard_lr_pad;
+    line-height: @btn_mini_height;
+    vertical-align: baseline;
 }
 
 .item_buttons {
     line-height: 1em;
+    .btn-toolbar();
     .btn {
         min-width: 13ex;
     }
-    .btn-toolbar();
+    .running-indicator {
+        padding-top: @dashboard_tb_pad;
+        color: @brand-success;
+    }
 }
 
 .toolbar_info {
@@ -131,12 +177,34 @@ input.engine_num_input {
     color: blue;
 }
 
-#project_name > .breadcrumb {
-    padding: 0px;
-    margin-bottom: 0px;
-    background-color: transparent;
-    font-weight: bold;
-   
+#project_name {
+    display: inline-block;
+    padding-left: @dashboard_lr_pad;
+    margin-left: -2px;
+
+    > .breadcrumb {
+        padding: 0px;
+        margin-bottom: 0px;
+        background-color: transparent;
+        font-weight: bold;
+    }
+}
+
+#tree-selector {
+    padding-right: 0px;
+}
+
+#button-select-all {
+    min-width: 50px;
+}
+
+#select-all {
+    margin-left: @dashboard_lr_pad;
+    margin-right: 2px;
+}
+
+.menu_icon {
+    margin-right: 2px;
 }
 
 .tab-content .row {
@@ -145,15 +213,28 @@ input.engine_num_input {
 }
 
 .folder_icon:before {
-    .icon(@fa-var-folder-o)
+    .icon(@fa-var-folder-o);
 }
 
 .notebook_icon:before {
-    .icon(@fa-var-book)
+    .icon(@fa-var-book);
+    position: relative;
+    top: -1px;
 }
 
+.running_notebook_icon:before {
+    .icon(@fa-var-book);
+    position: relative;
+    top: -1px;
+
+    color: @brand-success;
+}
+
+
 .file_icon:before {
-    .icon(@fa-var-file-o)
+    .icon(@fa-var-file-o);
+    position: relative;
+    top: -2px;
 }
 
 #notebook_toolbar .pull-right {
@@ -224,4 +305,25 @@ ul#new-menu {
             }
         }
     }
+}
+
+.delete-button {
+    display: none;
+}
+
+.duplicate-button {
+    display: none;
+}
+
+.rename-button {
+    display: none;
+}
+
+.shutdown-button {
+    display: none;
+}
+
+.dynamic-instructions {
+    display: inline-block;
+    padding-top: @dashboard_tb_pad;
 }

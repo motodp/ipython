@@ -1,25 +1,16 @@
-"""Bool class.  
+"""Bool class.
 
 Represents a boolean using a widget.
 """
-#-----------------------------------------------------------------------------
-# Copyright (c) 2013, the IPython Development Team.
-#
-# Distributed under the terms of the Modified BSD License.
-#
-# The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
 
-#-----------------------------------------------------------------------------
-# Imports
-#-----------------------------------------------------------------------------
+# Copyright (c) IPython Development Team.
+# Distributed under the terms of the Modified BSD License.
+
 from .widget import DOMWidget, register
 from IPython.utils.traitlets import Unicode, Bool, CaselessStrEnum
-from IPython.utils.warn import DeprecatedClass
+from .deprecated import DeprecatedClass
 
-#-----------------------------------------------------------------------------
-# Classes
-#-----------------------------------------------------------------------------
+
 class _Bool(DOMWidget):
     """A base class for creating widgets that represent booleans."""
     value = Bool(False, help="Bool value", sync=True)
@@ -55,16 +46,34 @@ class ToggleButton(_Bool):
            value of the toggle button: True-pressed, False-unpressed
        description : str
 	   description displayed next to the button
+       tooltip: str
+           tooltip caption of the toggle button
+       icon: str
+           font-awesome icon name
 """
-    
     _view_name = Unicode('ToggleButtonView', sync=True)
     tooltip = Unicode(help="Tooltip caption of the toggle button.", sync=True)
+    icon = Unicode('', help= "Font-awesome icon.", sync=True)
 
     button_style = CaselessStrEnum(
-        values=['primary', 'success', 'info', 'warning', 'danger', ''], 
+        values=['primary', 'success', 'info', 'warning', 'danger', ''],
         default_value='', allow_none=True, sync=True, help="""Use a
         predefined styling for the button.""")
 
+
+@register('IPython.Valid')
+class Valid(_Bool):
+
+    """Displays a boolean `value` in the form of a green check (True / valid)
+    or a red cross (False / invalid).
+
+    Parameters
+    ----------
+    value: {True,False}
+        value of the Valid widget
+"""
+    readout = Unicode(help="Message displayed when the value is False", sync=True)
+    _view_name = Unicode('ValidView', sync=True)
 
 # Remove in IPython 4.0
 CheckboxWidget = DeprecatedClass(Checkbox, 'CheckboxWidget')

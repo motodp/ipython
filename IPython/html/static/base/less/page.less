@@ -14,9 +14,6 @@ body {
     right: 0px;
     top: 0px;
     bottom: 0px;
-    @media not print {
-      .vbox();
-    }
     overflow: visible;
 }
 
@@ -26,6 +23,7 @@ body {
     background-color: @body-bg;
 
     /* Display over codemirror */
+    position: relative;
     z-index: 100;
 
     #header-container {
@@ -85,9 +83,9 @@ body {
     display: none;
     .border-box-sizing();
     overflow: auto;
-    @media not print {
-      flex: 1;
-      height: 0px; // triggers overflow, but overridded by flex
+    @media print {
+      // force auto-height on print (overrides manual resizing in live view)
+      height: auto !important;
     }
 }
 
@@ -122,9 +120,11 @@ span#login_widget > .button,
 // class for stretching dialogs to fill the screen
 .modal_stretch .modal-dialog {
     .vbox();
-    min-height: 80%;
+    min-height: 80vh;
     .modal-body {
-        max-height: none;
+        // ~"foo" is to avoid less turning this into a weird value
+        max-height: calc(~"100vh - 200px");
+        overflow: auto;
         flex: 1;
     }
 }
@@ -139,4 +139,11 @@ span#login_widget > .button,
 .icon(@ico){
     .fa();
     content: @ico;
+}
+
+@media (min-width: @screen-sm-min) {
+    select.form-control {
+        margin-left: @padding-base-horizontal;
+        margin-right: @padding-base-horizontal;
+    }
 }
