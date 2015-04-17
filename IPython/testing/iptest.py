@@ -34,7 +34,6 @@ from nose.core import TestProgram
 from nose.plugins import Plugin
 from nose.util import safe_str
 
-from IPython.utils.process import is_cmd_found
 from IPython.utils.py3compat import bytes_to_str
 from IPython.utils.importstring import import_item
 from IPython.testing.plugin.ipdoctest import IPythonDoctest
@@ -118,36 +117,16 @@ def test_for(item, min_version=None, callback=extract_version):
 # have available at test run time
 have = {}
 
-have['curses'] = test_for('_curses')
 have['matplotlib'] = test_for('matplotlib')
-have['numpy'] = test_for('numpy')
-have['pexpect'] = test_for('pexpect')
-have['pymongo'] = test_for('pymongo')
 have['pygments'] = test_for('pygments')
-have['qt'] = test_for('IPython.external.qt')
 have['sqlite3'] = test_for('sqlite3')
-have['tornado'] = test_for('tornado.version_info', (4,0), callback=None)
-have['jinja2'] = test_for('jinja2')
-have['mistune'] = test_for('mistune')
-have['requests'] = test_for('requests')
-have['sphinx'] = test_for('sphinx')
-have['jsonschema'] = test_for('jsonschema')
-have['terminado'] = test_for('terminado')
-have['casperjs'] = is_cmd_found('casperjs')
-have['phantomjs'] = is_cmd_found('phantomjs')
-have['slimerjs'] = is_cmd_found('slimerjs')
-
-min_zmq = (13,)
-
-have['zmq'] = test_for('zmq.pyzmq_version_info', min_zmq, callback=lambda x: x())
 
 #-----------------------------------------------------------------------------
 # Test suite definitions
 #-----------------------------------------------------------------------------
 
-test_group_names = ['parallel', 'kernel', 'kernel.inprocess', 'config', 'core',
+test_group_names = ['core',
                     'extensions', 'lib', 'terminal', 'testing', 'utils',
-                    'nbformat', 'qt', 'html', 'nbconvert'
                    ]
 
 class TestSection(object):
@@ -170,15 +149,8 @@ class TestSection(object):
     def will_run(self):
         return self.enabled and all(have[p] for p in self.dependencies)
 
-shims = {
-    'parallel': 'ipython_parallel',
-    'kernel': 'ipython_kernel',
-    'kernel.inprocess': 'ipython_kernel.inprocess',
-    'config': 'traitlets',
-}
-
 # Name -> (include, exclude, dependencies_met)
-test_sections = {n:TestSection(n, [shims.get(n, 'IPython.%s' % n)]) for n in test_group_names}
+test_sections = {n:TestSection(n, ['IPython.%s' % n]) for n in test_group_names}
 
 
 # Exclusions and dependencies
@@ -195,8 +167,9 @@ if not have['matplotlib']:
 
 # lib:
 sec = test_sections['lib']
-if not have['zmq']:
-    sec.exclude('kernel')
+sec.exclude('kernel')
+if not have['pygments']:
+    sec.exclude('tests.test_lexers')
 # We do this unconditionally, so that the test suite doesn't import
 # gtk, changing the default encoding and masking some unicode bugs.
 sec.exclude('inputhookgtk')
@@ -216,30 +189,8 @@ if sys.platform == 'win32':
     sec.exclude('plugin.test_exampleip')
     sec.exclude('plugin.dtexample')
 
-# terminal:
-if (not have['pexpect']) or (not have['zmq']):
-    test_sections['terminal'].exclude('console')
-
-# parallel
-sec = test_sections['parallel']
-sec.requires('zmq')
-if not have['pymongo']:
-    sec.exclude('controller.mongodb')
-    sec.exclude('tests.test_mongodb')
-
-# kernel:
-sec = test_sections['kernel']
-sec.requires('zmq')
-# The in-process kernel tests are done in a separate section
-sec.exclude('inprocess')
-# importing gtk sets the default encoding, which we want to avoid
-sec.exclude('gui.gtkembed')
-sec.exclude('gui.gtk3embed')
-if not have['matplotlib']:
-    sec.exclude('pylab')
-
-# kernel.inprocess:
-test_sections['kernel.inprocess'].requires('zmq')
+# don't run jupyter_console tests found via shim
+test_sections['terminal'].exclude('console')
 
 # extensions:
 sec = test_sections['extensions']
@@ -252,45 +203,13 @@ test_sections['autoreload'] = TestSection('autoreload',
         ['IPython.extensions.autoreload', 'IPython.extensions.tests.test_autoreload'])
 test_group_names.append('autoreload')
 
-# qt:
-test_sections['qt'].requires('zmq', 'qt', 'pygments')
-
-# html:
-sec = test_sections['html']
-sec.requires('zmq', 'tornado', 'requests', 'sqlite3', 'jsonschema')
-# The notebook 'static' directory contains JS, css and other
-# files for web serving.  Occasionally projects may put a .py
-# file in there (MathJax ships a conf.py), so we might as
-# well play it safe and skip the whole thing.
-sec.exclude('static')
-sec.exclude('tasks')
-if not have['jinja2']:
-    sec.exclude('notebookapp')
-if not have['pygments'] or not have['jinja2']:
-    sec.exclude('nbconvert')
-if not have['terminado']:
-    sec.exclude('terminal')
-
-# nbconvert:
-sec = test_sections['nbconvert']
-sec.requires('pygments', 'jinja2', 'jsonschema', 'mistune')
-# Exclude nbconvert directories containing config files used to test.
-# Executing the config files with iptest would cause an exception.
-sec.exclude('tests.files')
-sec.exclude('exporters.tests.files')
-if not have['tornado']:
-    sec.exclude('nbconvert.post_processors.serve')
-    sec.exclude('nbconvert.post_processors.tests.test_serve')
-
-# nbformat:
-test_sections['nbformat'].requires('jsonschema')
 
 #-----------------------------------------------------------------------------
 # Functions and classes
 #-----------------------------------------------------------------------------
 
 def check_exclusions_exist():
-    from IPython.utils.path import get_ipython_package_dir
+    from IPython.paths import get_ipython_package_dir
     from IPython.utils.warn import warn
     parent = os.path.dirname(get_ipython_package_dir())
     for sec in test_sections:
